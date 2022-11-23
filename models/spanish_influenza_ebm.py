@@ -48,7 +48,8 @@ class SpanishInfluenzaEBM:
         # Duration to simulate
         self.time_points: list = np.linspace(0, DURATION, RESOLUTION)
 
-    def compute_population(self, recovered, infectious, incubating, susceptible):
+    @staticmethod
+    def compute_population(recovered, infectious, incubating, susceptible):
         return recovered + infectious + incubating + susceptible
 
     def compute_r(self, susceptible, population):
@@ -90,7 +91,7 @@ class SpanishInfluenzaEBM:
               initial_total_infected=START_TOTAL_INFECTED):
         # Define the initial states
         y0 = (initial_recovered, initial_infectious, initial_susceptible,
-              initial_incubating,initial_total_infected)
+              initial_incubating, initial_total_infected)
 
         # Solve ODE starting from initial states
         y = odeint(self.compute_time_step,
