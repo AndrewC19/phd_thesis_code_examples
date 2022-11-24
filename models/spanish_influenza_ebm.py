@@ -128,8 +128,9 @@ class SpanishInfluenzaEBM:
         return incubating / self.incubation_time
 
     def model(self, states: tuple, t):
-        (susceptible, incubating, infected, recovered,
-         dead, total_infected) = states
+        (total_infected, susceptible,
+         incubating, infected,
+         dead, recovered) = states
 
         # Compute constants
         population = self.compute_population(susceptible, incubating,
@@ -146,8 +147,9 @@ class SpanishInfluenzaEBM:
         d_total_infected_dt = self.dTotalInfected_df(incubating)
 
         # Update the states
-        updates_states = (d_susceptible_dt, d_incubating_dt, d_infectious_dt,
-                          d_recovered_dt, d_deceased_dt, d_total_infected_dt)
+        updates_states = (d_total_infected_dt, d_susceptible_dt,
+                          d_incubating_dt, d_infectious_dt,
+                          d_deceased_dt, d_recovered_dt)
         return updates_states
 
     def solve(self,
@@ -157,11 +159,13 @@ class SpanishInfluenzaEBM:
               initial_recovered=START_RECOVERED,
               initial_deceased=START_DECEASED,
               initial_total_infected=START_TOTAL_INFECTED,
-              plot: bool = True):
+              plot: bool = True,
+              out_path: str = None):
 
         # Define the initial states
-        y0 = (initial_susceptible, initial_incubating, initial_infectious,
-              initial_recovered, initial_deceased, initial_total_infected)
+        y0 = (initial_total_infected, initial_susceptible,
+              initial_incubating, initial_infectious,
+              initial_deceased, initial_recovered)
 
         # Solve ODE starting from initial states
         y = odeint(self.model,
@@ -169,32 +173,41 @@ class SpanishInfluenzaEBM:
                    t=self.time_points)
 
         # Store results in a dataframe
-        results = pd.DataFrame({'susceptible': y[:, 0],
-                                'incubating': y[:, 1],
-                                'infectious': y[:, 2],
-                                'recovered': y[:, 3],
-                                'deceased': y[:, 4],
-                                'total_infected': y[:, 5]})
+        results = pd.DataFrame({'total_infected': y[:, 0],
+                                'susceptible': y[:, 1],
+                                'incubating': y[:, 2],
+                                'infectious': y[:, 3],
+                                'recovered': y[:, 4],
+                                'deceased': y[:, 5]})
         results.index.names = ['t']
 
         # Plot results
         if plot:
-            self.plot(results)
+            self.plot(results, out_path)
         return results
 
     @staticmethod
-    def plot(results_df):
+    def plot(results_df, out_path):
+        fig, ax = plt.subplots(3, 2, figsize=(10, 7))
         xs = results_df.index
-        for col in results_df.columns:
-            plt.plot(xs, results_df[col], color='red', linewidth=1)
-            plt.ticklabel_format(axis='y', style='sci', scilimits=(1, 4))
-            title_str = col.replace('_', ' ')
+        for i, state in enumerate(results_df.columns):
+            row = i // 2
+            col = i % 2
+            ax[row, col].plot(xs, results_df[state], color='red', linewidth=1)
+            ax[row, col].ticklabel_format(axis='y', style='sci',
+                                          scilimits=(1, 4))
+            title_str = state.replace('_', ' ')
             title_case_title_str = title_str.title()
-            plt.xlabel("Days")
-            plt.ylabel(title_case_title_str)
-            plt.show()
+            ax[row, col].set_xlabel("Days")
+            ax[row, col].set_ylabel(title_case_title_str)
+        plt.suptitle("Spanish Influenza 1918 in USA")
+        plt.tight_layout()
+        plt.show()
+        if out_path:
+            fig.savefig(out_path, format='pdf', dpi=300)
 
 
 if __name__ == "__main__":
     spanish_influenza_model = SpanishInfluenzaEBM()
-    spanish_influenza_df = spanish_influenza_model.solve()
+    spanish_influenza_df = spanish_influenza_model.solve(
+        out_path="spanish_influenza_ebm.pdf")
