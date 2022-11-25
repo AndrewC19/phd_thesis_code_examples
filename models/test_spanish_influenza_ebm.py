@@ -4,10 +4,8 @@ and Ozmen in their 2012 paper entitled: Early Results from Metamorphic Testing
 of Epidemiological Models.
 """
 
-import pytest
 import numpy as np
 
-from unittest import TestCase
 from spanish_influenza_ebm import SpanishInfluenzaEBM
 
 
