@@ -37,18 +37,28 @@ RESOLUTION = DURATION * 1
 
 class SpanishInfluenzaEBM:
 
-    def __init__(self):
+    def __init__(self,
+                 mortality_prob: float = START_MORTALITY_PROB,
+                 recovery_time: float = START_RECOVERY_TIME,
+                 mortality_time: float = START_MORTALITY_TIME,
+                 transmission_prob: float = START_TRANSMISSION_PROB,
+                 encounter_rate: float = START_ENCOUNTER_RATE,
+                 incubation_time: float = START_INCUBATION_TIME
+                 ):
 
         # Disease transmission parameters
-        self.mortality_prob: float = START_MORTALITY_PROB
-        self.recovery_time: float = START_RECOVERY_TIME
-        self.mortality_time: float = START_MORTALITY_TIME
-        self.transmission_prob: float = START_TRANSMISSION_PROB
-        self.encounter_rate: float = START_ENCOUNTER_RATE
-        self.incubation_time: float = START_INCUBATION_TIME
+        self.mortality_prob = mortality_prob
+        self.recovery_time = recovery_time
+        self.mortality_time = mortality_time
+        self.transmission_prob = transmission_prob
+        self.encounter_rate = encounter_rate
+        self.incubation_time = incubation_time
 
         # Duration to simulate
         self.time_points: list = np.linspace(0, DURATION, RESOLUTION)
+
+        # Population size
+        self.population_size = None
 
     @staticmethod
     def compute_population(susceptible, incubating, infected, recovered):
@@ -161,6 +171,10 @@ class SpanishInfluenzaEBM:
               initial_total_infected=START_TOTAL_INFECTED,
               plot: bool = True,
               out_path: str = None):
+        self.population_size = self.compute_population(initial_susceptible,
+                                                       initial_incubating,
+                                                       initial_infectious,
+                                                       initial_recovered)
 
         # Define the initial states
         y0 = (initial_total_infected, initial_susceptible,
@@ -177,8 +191,8 @@ class SpanishInfluenzaEBM:
                                 'susceptible': y[:, 1],
                                 'incubating': y[:, 2],
                                 'infectious': y[:, 3],
-                                'recovered': y[:, 4],
-                                'deceased': y[:, 5]})
+                                'deceased': y[:, 4],
+                                'recovered': y[:, 5]})
         results.index.names = ['t']
 
         # Plot results
@@ -188,18 +202,47 @@ class SpanishInfluenzaEBM:
 
     @staticmethod
     def plot(results_df, out_path):
-        fig, ax = plt.subplots(3, 2, figsize=(10, 7))
+        fig, ax = plt.subplots(3, 2, sharex=True, figsize=(10, 7))
         xs = results_df.index
-        for i, state in enumerate(results_df.columns):
-            row = i // 2
-            col = i % 2
-            ax[row, col].plot(xs, results_df[state], color='red', linewidth=1)
-            ax[row, col].ticklabel_format(axis='y', style='sci',
-                                          scilimits=(1, 4))
-            title_str = state.replace('_', ' ')
-            title_case_title_str = title_str.title()
-            ax[row, col].set_xlabel("Days")
-            ax[row, col].set_ylabel(title_case_title_str)
+
+        # Make plots resemble those from Sukumar and Nutaro's paper
+        ax[0, 0].plot(xs, results_df["total_infected"], color='red',
+                      linewidth=1)
+        ax[0, 0].ticklabel_format(axis='y', style='sci', scilimits=(1, 4))
+        ax[0, 0].set_ylim(0, 6e7)
+        ax[0, 0].set_ylabel("Total Infected")
+
+        ax[0, 1].plot(xs, results_df["susceptible"], color='red',
+                      linewidth=1)
+        ax[0, 1].ticklabel_format(axis='y', style='sci', scilimits=(1, 2))
+        ax[0, 1].set_ylim(4e7, 12e7)
+        ax[0, 1].set_ylabel("Susceptible")
+
+        ax[1, 0].plot(xs, results_df["incubating"], color='red',
+                      linewidth=1)
+        ax[1, 0].ticklabel_format(axis='y', style='sci', scilimits=(1, 4))
+        ax[1, 0].set_ylim(0, 6e6)
+        ax[1, 0].set_ylabel("Incubating")
+
+        ax[1, 1].plot(xs, results_df["infectious"], color='red',
+                      linewidth=1)
+        ax[1, 1].ticklabel_format(axis='y', style='sci', scilimits=(1, 4))
+        ax[1, 1].set_ylim(0, 4e6)
+        ax[1, 1].set_ylabel("Infectious")
+
+        ax[2, 0].plot(xs, results_df["deceased"], color='red',
+                      linewidth=1)
+        ax[2, 0].ticklabel_format(axis='y', style='sci', scilimits=(1, 4))
+        ax[2, 0].set_ylim(0, 6e5)
+        ax[2, 0].set_ylabel("Deceased")
+        ax[2, 0].set_xlabel("Days")
+
+        ax[2, 1].plot(xs, results_df["recovered"], color='red',
+                      linewidth=1)
+        ax[2, 1].ticklabel_format(axis='y', style='sci', scilimits=(1, 4))
+        ax[2, 1].set_ylim(0, 6e7)
+        ax[2, 1].set_ylabel("Recovered")
+        ax[2, 1].set_xlabel("Days")
         plt.suptitle("Spanish Influenza 1918 in USA")
         plt.tight_layout()
         plt.show()
