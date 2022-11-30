@@ -108,3 +108,219 @@ def test_MR2():
 
     # Is the magnitude of the effect greater than t 1/n?
     assert abs(1 / n) < abs(recovered_delta)
+
+
+def test_MR5():
+    source_model = SpanishInfluenzaEBM()
+    source_model_df = source_model.solve(plot=True)
+
+    n = np.random.uniform(0, 0.999)
+    follow_up_model = SpanishInfluenzaEBM()
+    follow_up_model.mortality_time *= n  # Apply the intervention
+    follow_up_model_df = follow_up_model.solve(plot=True)
+
+    # Check 1) (Total infected decreases by less than a factor of n)
+    total_infected_delta = (source_model_df["total_infected"].iloc[-1] -
+                            follow_up_model_df["total_infected"].iloc[-1])
+
+    decreased_delta = (source_model_df["deceased"].iloc[-1] -
+                       follow_up_model_df["deceased"].iloc[-1])
+
+    # Does this cause a decrease in total infections?
+    assert 0 < total_infected_delta
+
+    # Does this cause a decrease in deceased?
+    assert 0 < decreased_delta
+
+
+def test_MR6():
+    source_model = SpanishInfluenzaEBM()
+    source_model_df = source_model.solve(plot=True)
+
+    n = np.random.uniform(1.001, 10)
+    follow_up_model = SpanishInfluenzaEBM()
+    follow_up_model.mortality_time *= n  # Apply the intervention
+    follow_up_model_df = follow_up_model.solve(plot=True)
+
+    # Check 1) (Total infected decreases by less than a factor of n)
+    total_infected_delta = (source_model_df["total_infected"].iloc[-1] -
+                            follow_up_model_df["total_infected"].iloc[-1])
+
+    deceased_delta = (source_model_df["deceased"].iloc[-1] -
+                      follow_up_model_df["deceased"].iloc[-1])
+
+    # Does this cause an increase in total infections?
+    assert 0 > total_infected_delta
+
+    # Does this cause an increase in deceased?
+    assert 0 > deceased_delta
+
+
+def test_MR7():
+    source_model = SpanishInfluenzaEBM()
+    source_model_df = source_model.solve(plot=True)
+
+    n = np.random.uniform(0, 0.999)
+    follow_up_model = SpanishInfluenzaEBM()
+    follow_up_model.transmission_prob *= n  # Apply the intervention
+    follow_up_model_df = follow_up_model.solve(plot=True)
+
+    # Check 1) (Total infected decreases by less than a factor of n)
+    total_infected_delta = (source_model_df["total_infected"].iloc[-1] -
+                            follow_up_model_df["total_infected"].iloc[-1])
+
+    deceased_delta = (source_model_df["deceased"].iloc[-1] -
+                      follow_up_model_df["deceased"].iloc[-1])
+
+    recovered_delta = (source_model_df["recovered"].iloc[-1] -
+                       follow_up_model_df["recovered"].iloc[-1])
+
+    # Does this cause a decrease in total infections?
+    assert 0 < total_infected_delta
+
+    # Does this cause a decrease in deceased?
+    assert 0 < deceased_delta
+
+    # Does this cause a decrease in recovered?
+    assert 0 < recovered_delta
+
+
+def test_MR8():
+    source_model = SpanishInfluenzaEBM()
+    source_model_df = source_model.solve(plot=True)
+
+    n = np.random.uniform(1.001, 10)
+    follow_up_model = SpanishInfluenzaEBM()
+    follow_up_model.transmission_prob *= n  # Apply the intervention
+    follow_up_model_df = follow_up_model.solve(plot=True)
+
+    # Check 1) (Total infected decreases by less than a factor of n)
+    total_infected_delta = (source_model_df["total_infected"].iloc[-1] -
+                            follow_up_model_df["total_infected"].iloc[-1])
+
+    deceased_delta = (source_model_df["deceased"].iloc[-1] -
+                      follow_up_model_df["deceased"].iloc[-1])
+
+    recovered_delta = (source_model_df["recovered"].iloc[-1] -
+                       follow_up_model_df["recovered"].iloc[-1])
+
+    # Does this cause an increase in total infections?
+    assert 0 > total_infected_delta
+
+    # Does this cause an increase in deceased?
+    assert 0 > deceased_delta
+
+    # Does this cause an increase in recovered?
+    assert 0 > recovered_delta
+
+
+def test_MR11():
+    source_model = SpanishInfluenzaEBM()
+    source_model_df = source_model.solve(plot=True)
+
+    n = np.random.uniform(0, 0.999)
+    follow_up_model = SpanishInfluenzaEBM()
+    follow_up_model.recovery_time *= n  # Apply the intervention
+    follow_up_model_df = follow_up_model.solve(plot=True)
+
+    # Get the difference in peak infections between source and follow-up
+    peak_infectious_delta = (source_model_df["infectious"].max() -
+                             follow_up_model_df["infectious"].max())
+
+    # Get the gradient at each time step for both the source and follow-up
+    source_deceased_gradient = np.gradient(source_model_df["deceased"])
+    follow_up_decreased_gradient = np.gradient(follow_up_model_df["deceased"])
+
+    # Get the difference in maximum gradient between source and follow-up
+    deceased_gradient_delta = (max(source_deceased_gradient) -
+                               max(follow_up_decreased_gradient))
+
+    # Does this cause a decrease in peak infectious?
+    assert 0 < peak_infectious_delta
+
+    # Does this cause a decrease in rate of deceased?
+    assert 0 < deceased_gradient_delta
+
+
+def test_MR12():
+    source_model = SpanishInfluenzaEBM()
+    source_model_df = source_model.solve(plot=True)
+
+    n = np.random.uniform(1.001, 10)
+    follow_up_model = SpanishInfluenzaEBM()
+    follow_up_model.recovery_time *= n  # Apply the intervention
+    follow_up_model_df = follow_up_model.solve(plot=True)
+
+    # Get the difference in peak infections between source and follow-up
+    peak_infectious_delta = (source_model_df["infectious"].max() -
+                             follow_up_model_df["infectious"].max())
+
+    # Get the gradient at each time step for both the source and follow-up
+    source_deceased_gradient = np.gradient(source_model_df["deceased"])
+    follow_up_decreased_gradient = np.gradient(follow_up_model_df["deceased"])
+
+    # Get the difference in maximum gradient between source and follow-up
+    deceased_gradient_delta = (max(source_deceased_gradient) -
+                               max(follow_up_decreased_gradient))
+
+    # Does this cause an increase in peak infectious?
+    assert 0 > peak_infectious_delta
+
+    # Does this cause an increase in rate of deceased?
+    assert 0 > deceased_gradient_delta
+
+
+def test_MR13():
+    source_model = SpanishInfluenzaEBM()
+    source_model_df = source_model.solve(plot=True)
+
+    n = np.random.uniform(0, 0.999)
+    follow_up_model = SpanishInfluenzaEBM()
+    follow_up_model.encounter_rate *= n  # Apply the intervention
+    follow_up_model_df = follow_up_model.solve(plot=True)
+
+    # Get the difference in peak infections between source and follow-up
+    peak_infectious_delta = (source_model_df["infectious"].max() -
+                             follow_up_model_df["infectious"].max())
+
+    # Get the gradient at each time step for both the source and follow-up
+    source_deceased_gradient = np.gradient(source_model_df["deceased"])
+    follow_up_decreased_gradient = np.gradient(follow_up_model_df["deceased"])
+
+    # Get the difference in maximum gradient between source and follow-up
+    deceased_gradient_delta = (max(source_deceased_gradient) -
+                               max(follow_up_decreased_gradient))
+
+    # Does this cause a decrease in peak infectious?
+    assert 0 < peak_infectious_delta
+
+    # Does this cause a decrease in rate of deceased?
+    assert 0 < deceased_gradient_delta
+
+
+def test_MR14():
+    source_model = SpanishInfluenzaEBM()
+    source_model_df = source_model.solve(plot=True)
+
+    n = np.random.uniform(1.001, 10)
+    follow_up_model = SpanishInfluenzaEBM()
+    follow_up_model.encounter_rate *= n  # Apply the intervention
+    follow_up_model_df = follow_up_model.solve(plot=True)
+
+    # Get the difference in peak infections between source and follow-up
+    peak_infectious_delta = (source_model_df["infectious"].max() -
+                             follow_up_model_df["infectious"].max())
+
+    # Get the gradient at each time step for both the source and follow-up
+    source_deceased_gradient = np.gradient(source_model_df["deceased"])
+    follow_up_decreased_gradient = np.gradient(follow_up_model_df["deceased"])
+
+    # Get the difference in maximum gradient between source and follow-up
+    deceased_gradient_delta = (max(source_deceased_gradient) -
+                               max(follow_up_decreased_gradient))
+
+    # Does this cause an increase in peak infectious?
+    assert 0 > peak_infectious_delta
+
+    # Does this cause an increase in rate of deceased?
+    assert 0 > deceased_gradient_delta
