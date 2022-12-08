@@ -169,7 +169,7 @@ class SpanishInfluenzaEBM:
               initial_recovered=START_RECOVERED,
               initial_deceased=START_DECEASED,
               initial_total_infected=START_TOTAL_INFECTED,
-              plot: bool = True,
+              plot: bool = False,
               out_path: str = None):
         self.population_size = self.compute_population(initial_susceptible,
                                                        initial_incubating,

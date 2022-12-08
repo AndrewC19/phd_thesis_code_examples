@@ -5,6 +5,7 @@ of Epidemiological Models.
 """
 
 import numpy as np
+import pandas as pd
 
 from spanish_influenza_ebm import SpanishInfluenzaEBM
 
@@ -44,12 +45,12 @@ def random_test_case():
 
 def test_MR1():
     source_model = SpanishInfluenzaEBM()
-    source_model_df = source_model.solve(plot=True)
+    source_model_df = source_model.solve(plot=False)
 
     n = np.random.uniform(0, 0.999)
     follow_up_model = SpanishInfluenzaEBM()
     follow_up_model.mortality_prob *= n  # Apply the intervention
-    follow_up_model_df = follow_up_model.solve(plot=True)
+    follow_up_model_df = follow_up_model.solve(plot=False)
 
     # Check 1) (Deceased decreases by less than a factor of n)
     deceased_delta = (source_model_df["deceased"].iloc[-1] -
@@ -78,12 +79,12 @@ def test_MR1():
 
 def test_MR2():
     source_model = SpanishInfluenzaEBM()
-    source_model_df = source_model.solve(plot=True)
+    source_model_df = source_model.solve(plot=False)
 
     n = np.random.uniform(1.001, 10)
     follow_up_model = SpanishInfluenzaEBM()
     follow_up_model.mortality_prob *= n  # Apply the intervention
-    follow_up_model_df = follow_up_model.solve(plot=True)
+    follow_up_model_df = follow_up_model.solve(plot=False)
 
     # Check 1) (Deceased increases by less than a factor of n)
     deceased_delta = (source_model_df["deceased"].iloc[-1] -
@@ -112,12 +113,12 @@ def test_MR2():
 
 def test_MR5():
     source_model = SpanishInfluenzaEBM()
-    source_model_df = source_model.solve(plot=True)
+    source_model_df = source_model.solve(plot=False)
 
     n = np.random.uniform(0, 0.999)
     follow_up_model = SpanishInfluenzaEBM()
     follow_up_model.mortality_time *= n  # Apply the intervention
-    follow_up_model_df = follow_up_model.solve(plot=True)
+    follow_up_model_df = follow_up_model.solve(plot=False)
 
     # Check 1) (Total infected decreases by less than a factor of n)
     total_infected_delta = (source_model_df["total_infected"].iloc[-1] -
@@ -135,12 +136,12 @@ def test_MR5():
 
 def test_MR6():
     source_model = SpanishInfluenzaEBM()
-    source_model_df = source_model.solve(plot=True)
+    source_model_df = source_model.solve(plot=False)
 
     n = np.random.uniform(1.001, 10)
     follow_up_model = SpanishInfluenzaEBM()
     follow_up_model.mortality_time *= n  # Apply the intervention
-    follow_up_model_df = follow_up_model.solve(plot=True)
+    follow_up_model_df = follow_up_model.solve(plot=False)
 
     # Check 1) (Total infected decreases by less than a factor of n)
     total_infected_delta = (source_model_df["total_infected"].iloc[-1] -
@@ -158,12 +159,12 @@ def test_MR6():
 
 def test_MR7():
     source_model = SpanishInfluenzaEBM()
-    source_model_df = source_model.solve(plot=True)
+    source_model_df = source_model.solve(plot=False)
 
     n = np.random.uniform(0, 0.999)
     follow_up_model = SpanishInfluenzaEBM()
     follow_up_model.transmission_prob *= n  # Apply the intervention
-    follow_up_model_df = follow_up_model.solve(plot=True)
+    follow_up_model_df = follow_up_model.solve(plot=False)
 
     # Check 1) (Total infected decreases by less than a factor of n)
     total_infected_delta = (source_model_df["total_infected"].iloc[-1] -
@@ -187,12 +188,12 @@ def test_MR7():
 
 def test_MR8():
     source_model = SpanishInfluenzaEBM()
-    source_model_df = source_model.solve(plot=True)
+    source_model_df = source_model.solve(plot=False)
 
     n = np.random.uniform(1.001, 10)
     follow_up_model = SpanishInfluenzaEBM()
     follow_up_model.transmission_prob *= n  # Apply the intervention
-    follow_up_model_df = follow_up_model.solve(plot=True)
+    follow_up_model_df = follow_up_model.solve(plot=False)
 
     # Check 1) (Total infected decreases by less than a factor of n)
     total_infected_delta = (source_model_df["total_infected"].iloc[-1] -
@@ -214,14 +215,66 @@ def test_MR8():
     assert 0 > recovered_delta
 
 
+def test_MR9():
+    source_model = SpanishInfluenzaEBM()
+    source_model_df = source_model.solve(plot=False)
+
+    n = np.random.uniform(0, 0.999)
+    follow_up_model = SpanishInfluenzaEBM()
+    follow_up_model.incubation_time *= n  # Apply the intervention
+    follow_up_model_df = follow_up_model.solve(plot=False)
+
+    # Crude check for pandemic duration: find day of maximum infection change
+    d_source_total_infected_dt = np.gradient(source_model_df["total_infected"])
+    d_source_total_infected_dt_max = np.argmax(d_source_total_infected_dt)
+
+    d_follow_up_total_infected_dt = np.gradient(
+        follow_up_model_df["total_infected"])
+    d_follow_up_total_infected_dt_max = np.argmax(d_follow_up_total_infected_dt)
+
+    total_infections_peak_rate_day_delta = (d_source_total_infected_dt_max -
+                                            d_follow_up_total_infected_dt_max)
+
+    # Should cause peak to occur sooner so day of source peak should occur later
+    # than day of follow-up peak. Difference (source - follow-up) should
+    # therefore be positive.
+    assert (0 < total_infections_peak_rate_day_delta)
+
+
+def test_MR10():
+    source_model = SpanishInfluenzaEBM()
+    source_model_df = source_model.solve(plot=False)
+
+    n = np.random.uniform(1.001, 10)
+    follow_up_model = SpanishInfluenzaEBM()
+    follow_up_model.incubation_time *= n  # Apply the intervention
+    follow_up_model_df = follow_up_model.solve(plot=False)
+
+    # Crude check for pandemic duration: find day of maximum infection change
+    d_source_total_infected_dt = np.gradient(source_model_df["total_infected"])
+    d_source_total_infected_dt_max = np.argmax(d_source_total_infected_dt)
+
+    d_follow_up_total_infected_dt = np.gradient(
+        follow_up_model_df["total_infected"])
+    d_follow_up_total_infected_dt_max = np.argmax(d_follow_up_total_infected_dt)
+
+    total_infections_peak_rate_day_delta = (d_source_total_infected_dt_max -
+                                            d_follow_up_total_infected_dt_max)
+
+    # Should cause peak to occur later so day of source peak should occur sooner
+    # than day of follow-up peak. Difference (source - follow-up) should
+    # therefore be negative.
+    assert (0 > total_infections_peak_rate_day_delta)
+
+
 def test_MR11():
     source_model = SpanishInfluenzaEBM()
-    source_model_df = source_model.solve(plot=True)
+    source_model_df = source_model.solve(plot=False)
 
     n = np.random.uniform(0, 0.999)
     follow_up_model = SpanishInfluenzaEBM()
     follow_up_model.recovery_time *= n  # Apply the intervention
-    follow_up_model_df = follow_up_model.solve(plot=True)
+    follow_up_model_df = follow_up_model.solve(plot=False)
 
     # Get the difference in peak infections between source and follow-up
     peak_infectious_delta = (source_model_df["infectious"].max() -
@@ -244,12 +297,12 @@ def test_MR11():
 
 def test_MR12():
     source_model = SpanishInfluenzaEBM()
-    source_model_df = source_model.solve(plot=True)
+    source_model_df = source_model.solve(plot=False)
 
     n = np.random.uniform(1.001, 10)
     follow_up_model = SpanishInfluenzaEBM()
     follow_up_model.recovery_time *= n  # Apply the intervention
-    follow_up_model_df = follow_up_model.solve(plot=True)
+    follow_up_model_df = follow_up_model.solve(plot=False)
 
     # Get the difference in peak infections between source and follow-up
     peak_infectious_delta = (source_model_df["infectious"].max() -
@@ -272,12 +325,12 @@ def test_MR12():
 
 def test_MR13():
     source_model = SpanishInfluenzaEBM()
-    source_model_df = source_model.solve(plot=True)
+    source_model_df = source_model.solve(plot=False)
 
     n = np.random.uniform(0, 0.999)
     follow_up_model = SpanishInfluenzaEBM()
     follow_up_model.encounter_rate *= n  # Apply the intervention
-    follow_up_model_df = follow_up_model.solve(plot=True)
+    follow_up_model_df = follow_up_model.solve(plot=False)
 
     # Get the difference in peak infections between source and follow-up
     peak_infectious_delta = (source_model_df["infectious"].max() -
@@ -300,12 +353,12 @@ def test_MR13():
 
 def test_MR14():
     source_model = SpanishInfluenzaEBM()
-    source_model_df = source_model.solve(plot=True)
+    source_model_df = source_model.solve(plot=False)
 
     n = np.random.uniform(1.001, 10)
     follow_up_model = SpanishInfluenzaEBM()
     follow_up_model.encounter_rate *= n  # Apply the intervention
-    follow_up_model_df = follow_up_model.solve(plot=True)
+    follow_up_model_df = follow_up_model.solve(plot=False)
 
     # Get the difference in peak infections between source and follow-up
     peak_infectious_delta = (source_model_df["infectious"].max() -
