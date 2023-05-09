@@ -251,6 +251,7 @@ class SpanishInfluenzaEBM:
 
 
 if __name__ == "__main__":
-    spanish_influenza_model = SpanishInfluenzaEBM()
-    spanish_influenza_df = spanish_influenza_model.solve(
-        out_path="spanish_influenza_ebm.pdf")
+    spanish_influenza_model = SpanishInfluenzaEBM(mortality_prob=22*START_MORTALITY_PROB)
+    print(spanish_influenza_model.mortality_prob)
+    spanish_influenza_df = spanish_influenza_model.solve(plot=True,
+        out_path="spanish_influenza_ebm_high_alpha.pdf")
