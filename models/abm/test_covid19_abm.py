@@ -23,6 +23,7 @@ np.random.seed(123)  # set seed for reproducibility
 
 N_REPEATS = 30
 
+
 def empty_results_df():
     inputs = ["mortality_prob", "recovery_time", "mortality_time",
               "transmission_prob", "encounter_rate", "incubation_time",
@@ -214,13 +215,105 @@ def test_MR1():
     test_b = abs(follow_up_sim.pars["pop_size"] *
                  follow_up_sim.pars["pop_scale"] * n) > abs(deceased_delta)
 
+    #
+    recovered_delta = (source_df["n_recovered_200"].mean() -
+                       follow_up_df["n_recovered_200"].mean())
+
+    # Does this cause an increase?
+    test_c = 0 > recovered_delta
+
+    # Is the magnitude of the effect greater than 1/n?
+    test_d = abs(follow_up_sim.pars["pop_size"] *
+                 follow_up_sim.pars["pop_scale"] *
+                 (1 / n)) < abs(recovered_delta)
+    print(follow_up_sim.pars["pop_size"] *
+                 follow_up_sim.pars["pop_scale"] *
+                 (1 / n))
+    print(abs(recovered_delta))
+
+    end_time = time.time()
+    execution_time = end_time - start_time
+    test_pass = test_a and test_b and test_c and test_d
+
+    # Write the overall metamorphic test results to CSV
+    results_data_df = append_results_to_df(results_data_df,
+                                           "MR1",
+                                           execution_time,
+                                           test_pass,
+                                           "mortality_prob",
+                                           "deceased",
+                                           n,
+                                           deceased_delta,
+                                           n_repeats,
+                                           source_mortality_prob,
+                                           follow_up_mortality_prob)
+
+    results_data_df.to_csv(OUTPUT_CSV_PATH)
+    assert test_a and test_b and test_c and test_d
+
+
+def test_MR1_fixed():
+    """Decreasing mortality prob by a factor of n should decrease deaths by a
+    factor of at most n."""
+    # Repeat every test 30 times using the same change in input parameter.
+    n = np.random.uniform(0, 0.999)
+    execution_data_df = empty_results_df()
+    results_data_df = pd.read_csv(OUTPUT_CSV_PATH, index_col=[0])
+
+    # Time completion of n repeats
+    start_time = time.time()
+    n_repeats = N_REPEATS
+    for repeat in range(n_repeats):
+        execution_data_df = run_source_test(execution_data_df, "mr1-fixed")
+
+        follow_up_start_time = time.time()
+        follow_up_pars = {"rand_seed": np.random.randint(1, 1e6)}
+        follow_up_sim = covid19(pars_to_change=follow_up_pars)
+        follow_up_sim.pars["prognoses"]["death_probs"] *= n
+        executed_follow_up_sim = run_covid19(follow_up_sim)
+        follow_up_execution_time = time.time() - follow_up_start_time
+        execution_data_df = append_execution_to_df(execution_data_df,
+                                                   executed_follow_up_sim,
+                                                   "MR1-fixed",
+                                                   "follow-up",
+                                                   follow_up_execution_time,
+                                                   n)
+
+    save_execution_data_to_csv(execution_data_df, "mr1")
+    source_df, follow_up_df = get_source_and_follow_up_df(execution_data_df)
+
+    ############################## SANITY CHECKS ##############################
+    # The mortality prob should be the same for all source executions
+    source_mortality_prob = source_df["mortality_prob"].astype(str).unique()
+    assert len(source_mortality_prob) == 1
+
+    # The mortality prob should be the same for all follow-up executions
+    follow_up_mortality_prob = follow_up_df[
+        "mortality_prob"].astype(str).unique()
+    assert len(follow_up_mortality_prob) == 1
+
+    # The mortality prob should be different for source vs. follow-up executions
+    assert (source_mortality_prob != follow_up_mortality_prob)
+    ###########################################################################
+
+    # Check 1) (Deceased decreases by less than a factor of n)
+    deceased_delta = (source_df["n_dead_200"].mean() -
+                      follow_up_df["n_dead_200"].mean())
+
+    # Does this cause a decrease?
+    test_a = 0 < deceased_delta
+
+    # Check 2) (Is the magnitude of the effect a factor of at most n?)
+    test_b = abs(follow_up_sim.pars["pop_size"] *
+                 follow_up_sim.pars["pop_scale"] * n) > abs(deceased_delta)
+
     end_time = time.time()
     execution_time = end_time - start_time
     test_pass = test_a and test_b
 
     # Write the overall metamorphic test results to CSV
     results_data_df = append_results_to_df(results_data_df,
-                                           "MR1",
+                                           "MR1-fixed",
                                            execution_time,
                                            test_pass,
                                            "mortality_prob",
@@ -290,13 +383,101 @@ def test_MR2():
     test_b = abs(follow_up_sim.pars["pop_size"] *
                  follow_up_sim.pars["pop_scale"] * n) > abs(deceased_delta)
 
+    recovered_delta = (source_df["n_recovered_200"].mean() -
+                       follow_up_df["n_recovered_200"].mean())
+
+    # Does this cause a decrease?
+    test_c = 0 < recovered_delta
+
+    # Is the magnitude of the effect greater than 1/n?
+    test_d = abs(follow_up_sim.pars["pop_size"] *
+                 follow_up_sim.pars["pop_scale"] *
+                 (1 / n)) < abs(recovered_delta)
+
+    test_pass = test_a and test_b and test_c and test_d
+
+    end_time = time.time()
+    execution_time = end_time - start_time
+
+    # Write the overall metamorphic test results to CSV
+    results_data_df = append_results_to_df(results_data_df,
+                                           "MR2",
+                                           execution_time,
+                                           test_pass,
+                                           "mortality_prob",
+                                           "deceased",
+                                           n,
+                                           deceased_delta,
+                                           n_repeats,
+                                           source_mortality_prob,
+                                           follow_up_mortality_prob)
+
+    results_data_df.to_csv(OUTPUT_CSV_PATH)
+    assert test_pass
+
+
+def test_MR2_fixed():
+    """Increasing mortality prob by a factor of n should increase deaths by a
+    factor of at most n."""
+    # Repeat every test 30 times using the same change in input parameter.
+    n = np.random.uniform(1.001, 30)
+    execution_data_df = empty_results_df()
+    results_data_df = pd.read_csv(OUTPUT_CSV_PATH, index_col=[0])
+
+    # Time completion of n repeats
+    start_time = time.time()
+    n_repeats = N_REPEATS
+    for repeat in range(n_repeats):
+        execution_data_df = run_source_test(execution_data_df, "mr2-fixed")
+
+        follow_up_start_time = time.time()
+        follow_up_pars = {"rand_seed": np.random.randint(1, 1e6)}
+        follow_up_sim = covid19(pars_to_change=follow_up_pars)
+        follow_up_sim.pars["prognoses"]["death_probs"] *= n
+        executed_follow_up_sim = run_covid19(follow_up_sim)
+        follow_up_execution_time = time.time() - follow_up_start_time
+        execution_data_df = append_execution_to_df(execution_data_df,
+                                                   executed_follow_up_sim,
+                                                   "MR2-fixed",
+                                                   "follow-up",
+                                                   follow_up_execution_time,
+                                                   n)
+
+    save_execution_data_to_csv(execution_data_df, "mr2")
+    source_df, follow_up_df = get_source_and_follow_up_df(execution_data_df)
+
+    ############################## SANITY CHECKS ##############################
+    # The mortality prob should be the same for all source executions
+    source_mortality_prob = source_df["mortality_prob"].astype(str).unique()
+    assert len(source_mortality_prob) == 1
+
+    # The mortality prob should be the same for all follow-up executions
+    follow_up_mortality_prob = follow_up_df[
+        "mortality_prob"].astype(str).unique()
+    assert len(follow_up_mortality_prob) == 1
+
+    # The mortality prob should be different for source vs. follow-up executions
+    assert (source_mortality_prob != follow_up_mortality_prob)
+    ###########################################################################
+
+    # Check 1) (Deceased increases by less than a factor of n)
+    deceased_delta = (source_df["n_dead_200"].mean() -
+                      follow_up_df["n_dead_200"].mean())
+
+    # Does this cause an increase?
+    test_a = 0 > deceased_delta
+
+    # Check 2) (Is the magnitude of the effect a factor of at most n?)
+    test_b = abs(follow_up_sim.pars["pop_size"] *
+                 follow_up_sim.pars["pop_scale"] * n) > abs(deceased_delta)
+
     end_time = time.time()
     execution_time = end_time - start_time
     test_pass = test_a and test_b
 
     # Write the overall metamorphic test results to CSV
     results_data_df = append_results_to_df(results_data_df,
-                                           "MR2",
+                                           "MR2-fixed",
                                            execution_time,
                                            test_pass,
                                            "mortality_prob",
