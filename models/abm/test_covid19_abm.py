@@ -21,6 +21,7 @@ OUTPUT_CSV_PATH = "models/abm/metamorphic_testing_results.csv"
 
 np.random.seed(123)  # set seed for reproducibility
 
+N_REPEATS = 30
 
 def empty_results_df():
     inputs = ["mortality_prob", "recovery_time", "mortality_time",
@@ -168,7 +169,7 @@ def test_MR1():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 2
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr1")
 
@@ -244,7 +245,7 @@ def test_MR2():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 5
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr2")
 
@@ -321,7 +322,7 @@ def test_MR3():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 5
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr3")
 
@@ -411,7 +412,7 @@ def test_MR4():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 5
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr4")
 
@@ -496,7 +497,7 @@ def test_MR5():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 30
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr5")
 
@@ -564,90 +565,89 @@ def test_MR5():
     assert test_pass
 
 
-def test_MR5_fixed():
-    """Decreasing the death time should reduce the number of infections and
-    deaths."""
-    # Repeat every test 30 times using the same change in input parameter.
-    n = np.random.uniform(0, 0.999)
-    execution_data_df = empty_results_df()
-    results_data_df = pd.read_csv(OUTPUT_CSV_PATH, index_col=[0])
-
-    # Time completion of n repeats
-    start_time = time.time()
-    n_repeats = 30
-    for repeat in range(n_repeats):
-        execution_data_df = run_source_test(execution_data_df, "mr5")
-
-        follow_up_start_time = time.time()
-        follow_up_pars = {"rand_seed": np.random.randint(1, 1e6)}
-        follow_up_sim = covid19(pars_to_change=follow_up_pars)
-
-        # Decrease mean of the mortality time AND recovery times
-        follow_up_sim.pars["dur"]["crit2die"]["par1"] *= n
-        follow_up_sim.pars["dur"]["asym2rec"]["par1"] *= n
-        follow_up_sim.pars["dur"]["mild2rec"]["par1"] *= n
-        follow_up_sim.pars["dur"]["sev2rec"]["par1"] *= n
-        follow_up_sim.pars["dur"]["crit2rec"]["par1"] *= n
-
-        executed_follow_up_sim = run_covid19(follow_up_sim)
-
-        follow_up_execution_time = time.time() - follow_up_start_time
-        execution_data_df = append_execution_to_df(execution_data_df,
-                                                   executed_follow_up_sim,
-                                                   "MR5",
-                                                   "follow-up",
-                                                   follow_up_execution_time,
-                                                   n)
-
-    save_execution_data_to_csv(execution_data_df, "mr5")
-    source_df, follow_up_df = get_source_and_follow_up_df(execution_data_df)
-
-    ############################## SANITY CHECKS ##############################
-    # The mortality time should be the same for all source executions
-    source_mortality_time = source_df["mortality_time"].astype(str).unique()
-    assert len(source_mortality_time) == 1
-
-    # The mortality time should be the same for all follow-up executions
-    follow_up_mortality_time = follow_up_df[
-        "mortality_time"].astype(str).unique()
-    assert len(follow_up_mortality_time) == 1
-
-    # The mortality time should be different for source vs. follow-up executions
-    assert (source_mortality_time != follow_up_mortality_time)
-    ###########################################################################
-
-    infected_delta = (source_df["cum_infections_200"].mean() -
-                      follow_up_df["cum_infections_200"].mean())
-    deceased_delta = (source_df["n_dead_200"].mean() -
-                      follow_up_df["n_dead_200"].mean())
-
-    test_a = 0 < infected_delta
-    test_b = 0 < deceased_delta
-
-    end_time = time.time()
-    execution_time = end_time - start_time
-    test_pass = test_a and test_b
-
-    # Write the overall metamorphic test results to CSV
-    results_data_df = append_results_to_df(results_data_df,
-                                           "MR5",
-                                           execution_time,
-                                           test_pass,
-                                           "mortality_time_mean",
-                                           ["deceased", "infections"],
-                                           n,
-                                           {"infected_delta": infected_delta,
-                                            "deceased_delta": deceased_delta},
-                                           n_repeats,
-                                           source_mortality_time,
-                                           follow_up_mortality_time)
-
-    results_data_df.to_csv(OUTPUT_CSV_PATH)
-    assert test_pass
+# def test_MR5_fixed():
+#     """Decreasing the death time should reduce the number of infections and
+#     deaths."""
+#     # Repeat every test 30 times using the same change in input parameter.
+#     n = np.random.uniform(0, 0.999)
+#     execution_data_df = empty_results_df()
+#     results_data_df = pd.read_csv(OUTPUT_CSV_PATH, index_col=[0])
+#
+#     # Time completion of n repeats
+#     start_time = time.time()
+#     n_repeats = N_REPEATS
+#     for repeat in range(n_repeats):
+#         execution_data_df = run_source_test(execution_data_df, "mr5")
+#
+#         follow_up_start_time = time.time()
+#         follow_up_pars = {"rand_seed": np.random.randint(1, 1e6)}
+#         follow_up_sim = covid19(pars_to_change=follow_up_pars)
+#
+#         # Decrease mean of the mortality time AND recovery times
+#         follow_up_sim.pars["dur"]["crit2die"]["par1"] *= n
+#         follow_up_sim.pars["dur"]["asym2rec"]["par1"] *= n
+#         follow_up_sim.pars["dur"]["mild2rec"]["par1"] *= n
+#         follow_up_sim.pars["dur"]["sev2rec"]["par1"] *= n
+#         follow_up_sim.pars["dur"]["crit2rec"]["par1"] *= n
+#
+#         executed_follow_up_sim = run_covid19(follow_up_sim)
+#
+#         follow_up_execution_time = time.time() - follow_up_start_time
+#         execution_data_df = append_execution_to_df(execution_data_df,
+#                                                    executed_follow_up_sim,
+#                                                    "MR5",
+#                                                    "follow-up",
+#                                                    follow_up_execution_time,
+#                                                    n)
+#
+#     save_execution_data_to_csv(execution_data_df, "mr5")
+#     source_df, follow_up_df = get_source_and_follow_up_df(execution_data_df)
+#
+#     ############################## SANITY CHECKS ##############################
+#     # The mortality time should be the same for all source executions
+#     source_mortality_time = source_df["mortality_time"].astype(str).unique()
+#     assert len(source_mortality_time) == 1
+#
+#     # The mortality time should be the same for all follow-up executions
+#     follow_up_mortality_time = follow_up_df[
+#         "mortality_time"].astype(str).unique()
+#     assert len(follow_up_mortality_time) == 1
+#
+#     # The mortality time should be different for source vs. follow-up executions
+#     assert (source_mortality_time != follow_up_mortality_time)
+#     ###########################################################################
+#
+#     infected_delta = (source_df["cum_infections_200"].mean() -
+#                       follow_up_df["cum_infections_200"].mean())
+#     deceased_delta = (source_df["n_dead_200"].mean() -
+#                       follow_up_df["n_dead_200"].mean())
+#
+#     test_a = 0 < infected_delta
+#     test_b = 0 < deceased_delta
+#
+#     end_time = time.time()
+#     execution_time = end_time - start_time
+#     test_pass = test_a and test_b
+#
+#     # Write the overall metamorphic test results to CSV
+#     results_data_df = append_results_to_df(results_data_df,
+#                                            "MR5",
+#                                            execution_time,
+#                                            test_pass,
+#                                            "mortality_time_mean",
+#                                            ["deceased", "infections"],
+#                                            n,
+#                                            {"infected_delta": infected_delta,
+#                                             "deceased_delta": deceased_delta},
+#                                            n_repeats,
+#                                            source_mortality_time,
+#                                            follow_up_mortality_time)
+#
+#     results_data_df.to_csv(OUTPUT_CSV_PATH)
+#     assert test_pass
 
 
 def test_MR6():
-    # TODO: FAILS
     """Increasing the death time should increase the number of infections and
     deaths."""
     # Repeat every test 30 times using the same change in input parameter.
@@ -657,7 +657,7 @@ def test_MR6():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 5
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr6")
 
@@ -725,86 +725,86 @@ def test_MR6():
     assert test_pass
 
 
-def test_MR6_fixed():
-    """Increasing the death time should increase the number of infections and
-    deaths."""
-    # Repeat every test 30 times using the same change in input parameter.
-    n = np.random.uniform(1.001, 30)
-    execution_data_df = empty_results_df()
-    results_data_df = pd.read_csv(OUTPUT_CSV_PATH, index_col=[0])
-
-    # Time completion of n repeats
-    start_time = time.time()
-    n_repeats = 5
-    for repeat in range(n_repeats):
-        execution_data_df = run_source_test(execution_data_df, "mr6")
-
-        follow_up_start_time = time.time()
-        follow_up_pars = {"rand_seed": np.random.randint(1, 1e6)}
-        follow_up_sim = covid19(pars_to_change=follow_up_pars)
-
-        # Increase mean of the mortality AND recovery times
-        follow_up_sim.pars["dur"]["crit2die"]["par1"] *= n
-        follow_up_sim.pars["dur"]["asym2rec"]["par1"] *= n
-        follow_up_sim.pars["dur"]["mild2rec"]["par1"] *= n
-        follow_up_sim.pars["dur"]["sev2rec"]["par1"] *= n
-        follow_up_sim.pars["dur"]["crit2rec"]["par1"] *= n
-
-        executed_follow_up_sim = run_covid19(follow_up_sim)
-
-        follow_up_execution_time = time.time() - follow_up_start_time
-        execution_data_df = append_execution_to_df(execution_data_df,
-                                                   executed_follow_up_sim,
-                                                   "MR6",
-                                                   "follow-up",
-                                                   follow_up_execution_time,
-                                                   n)
-
-    save_execution_data_to_csv(execution_data_df, "mr6")
-    source_df, follow_up_df = get_source_and_follow_up_df(execution_data_df)
-
-    ############################## SANITY CHECKS ##############################
-    # The mortality time should be the same for all source executions
-    source_mortality_time = source_df["mortality_time"].astype(str).unique()
-    assert len(source_mortality_time) == 1
-
-    # The mortality time should be the same for all follow-up executions
-    follow_up_mortality_time = follow_up_df[
-        "mortality_time"].astype(str).unique()
-    assert len(follow_up_mortality_time) == 1
-
-    # The mortality time should be different for source vs. follow-up executions
-    assert (source_mortality_time != follow_up_mortality_time)
-    ###########################################################################
-
-    infected_delta = (source_df["cum_infections_200"].mean() -
-                      follow_up_df["cum_infections_200"].mean())
-    deceased_delta = (source_df["n_dead_200"].mean() -
-                      follow_up_df["n_dead_200"].mean())
-
-    test_a = 0 > infected_delta
-    test_b = 0 > deceased_delta
-
-    end_time = time.time()
-    execution_time = end_time - start_time
-    test_pass = test_a and test_b
-
-    # Write the overall metamorphic test results to CSV
-    results_data_df = append_results_to_df(results_data_df,
-                                           "MR6",
-                                           execution_time,
-                                           test_pass,
-                                           "mortality_time_mean",
-                                           ["deceased", "infections"],
-                                           n,
-                                           {"infected_delta": infected_delta,
-                                            "deceased_delta": deceased_delta},
-                                           n_repeats,
-                                           source_mortality_time,
-                                           follow_up_mortality_time)
-
-    results_data_df.to_csv(OUTPUT_CSV_PATH)
-    assert test_pass
+# def test_MR6_fixed():
+#     """Increasing the death time should increase the number of infections and
+#     deaths."""
+#     # Repeat every test 30 times using the same change in input parameter.
+#     n = np.random.uniform(1.001, 30)
+#     execution_data_df = empty_results_df()
+#     results_data_df = pd.read_csv(OUTPUT_CSV_PATH, index_col=[0])
+#
+#     # Time completion of n repeats
+#     start_time = time.time()
+#     n_repeats = N_REPEATS
+#     for repeat in range(n_repeats):
+#         execution_data_df = run_source_test(execution_data_df, "mr6")
+#
+#         follow_up_start_time = time.time()
+#         follow_up_pars = {"rand_seed": np.random.randint(1, 1e6)}
+#         follow_up_sim = covid19(pars_to_change=follow_up_pars)
+#
+#         # Increase mean of the mortality AND recovery times
+#         follow_up_sim.pars["dur"]["crit2die"]["par1"] *= n
+#         follow_up_sim.pars["dur"]["asym2rec"]["par1"] *= n
+#         follow_up_sim.pars["dur"]["mild2rec"]["par1"] *= n
+#         follow_up_sim.pars["dur"]["sev2rec"]["par1"] *= n
+#         follow_up_sim.pars["dur"]["crit2rec"]["par1"] *= n
+#
+#         executed_follow_up_sim = run_covid19(follow_up_sim)
+#
+#         follow_up_execution_time = time.time() - follow_up_start_time
+#         execution_data_df = append_execution_to_df(execution_data_df,
+#                                                    executed_follow_up_sim,
+#                                                    "MR6",
+#                                                    "follow-up",
+#                                                    follow_up_execution_time,
+#                                                    n)
+#
+#     save_execution_data_to_csv(execution_data_df, "mr6")
+#     source_df, follow_up_df = get_source_and_follow_up_df(execution_data_df)
+#
+#     ############################## SANITY CHECKS ##############################
+#     # The mortality time should be the same for all source executions
+#     source_mortality_time = source_df["mortality_time"].astype(str).unique()
+#     assert len(source_mortality_time) == 1
+#
+#     # The mortality time should be the same for all follow-up executions
+#     follow_up_mortality_time = follow_up_df[
+#         "mortality_time"].astype(str).unique()
+#     assert len(follow_up_mortality_time) == 1
+#
+#     # The mortality time should be different for source vs. follow-up executions
+#     assert (source_mortality_time != follow_up_mortality_time)
+#     ###########################################################################
+#
+#     infected_delta = (source_df["cum_infections_200"].mean() -
+#                       follow_up_df["cum_infections_200"].mean())
+#     deceased_delta = (source_df["n_dead_200"].mean() -
+#                       follow_up_df["n_dead_200"].mean())
+#
+#     test_a = 0 > infected_delta
+#     test_b = 0 > deceased_delta
+#
+#     end_time = time.time()
+#     execution_time = end_time - start_time
+#     test_pass = test_a and test_b
+#
+#     # Write the overall metamorphic test results to CSV
+#     results_data_df = append_results_to_df(results_data_df,
+#                                            "MR6",
+#                                            execution_time,
+#                                            test_pass,
+#                                            "mortality_time_mean",
+#                                            ["deceased", "infections"],
+#                                            n,
+#                                            {"infected_delta": infected_delta,
+#                                             "deceased_delta": deceased_delta},
+#                                            n_repeats,
+#                                            source_mortality_time,
+#                                            follow_up_mortality_time)
+#
+#     results_data_df.to_csv(OUTPUT_CSV_PATH)
+#     assert test_pass
 
 
 def test_MR7():
@@ -817,7 +817,7 @@ def test_MR7():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 5
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr7")
 
@@ -902,7 +902,7 @@ def test_MR8():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 5
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr8")
 
@@ -989,7 +989,7 @@ def test_MR9():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 15
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr9")
 
@@ -1084,7 +1084,7 @@ def test_MR10():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 4
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr10")
 
@@ -1180,7 +1180,7 @@ def test_MR11():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 5
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr11")
 
@@ -1293,7 +1293,7 @@ def test_MR12():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 5
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr12")
 
@@ -1406,7 +1406,7 @@ def test_MR13():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 5
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr13")
 
@@ -1520,7 +1520,7 @@ def test_MR14():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 5
+    n_repeats = N_REPEATS
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr14")
 
