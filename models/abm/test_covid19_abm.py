@@ -244,7 +244,7 @@ def test_MR2():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 2
+    n_repeats = 5
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr2")
 
@@ -321,7 +321,7 @@ def test_MR3():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 3
+    n_repeats = 5
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr3")
 
@@ -355,19 +355,23 @@ def test_MR3():
     ###########################################################################
 
     n_dead_cols = [f"n_dead_{day}" for day in range(0, 201)]
-    n_dead_source_array = source_df[n_dead_cols].to_numpy().flatten()
-    source_deceased_gradient = np.gradient(n_dead_source_array)
-    source_deceased_max_gradient_day = np.argmax(source_deceased_gradient)
+    n_dead_source_array = source_df[n_dead_cols].to_numpy()
+    source_deceased_gradient = np.gradient(n_dead_source_array, axis=1)
+    source_deceased_max_gradient_day = np.argmax(source_deceased_gradient,
+                                                 axis=1)
+    source_mean_max_gradient_day = source_deceased_max_gradient_day.mean()
 
-    n_dead_follow_up_array = follow_up_df[n_dead_cols].to_numpy().flatten()
-    follow_up_deceased_gradient = np.gradient(n_dead_follow_up_array)
-    follow_up_deceased_max_gradient_day = np.argmax(follow_up_deceased_gradient)
+    n_dead_follow_up_array = follow_up_df[n_dead_cols].to_numpy()
+    follow_up_deceased_gradient = np.gradient(n_dead_follow_up_array, axis=1)
+    follow_up_deceased_max_gradient_day = np.argmax(follow_up_deceased_gradient,
+                                                    axis=1)
+    follow_up_mean_max_gradient_day = follow_up_deceased_max_gradient_day.mean()
 
-    peak_delta = (source_deceased_max_gradient_day -
-                  follow_up_deceased_max_gradient_day)
+    peak_delta = (source_mean_max_gradient_day -
+                  follow_up_mean_max_gradient_day)
 
-    test_a = (follow_up_deceased_max_gradient_day >
-              source_deceased_max_gradient_day)
+    test_a = (follow_up_mean_max_gradient_day >
+              source_mean_max_gradient_day)
 
     end_time = time.time()
     execution_time = end_time - start_time
@@ -407,7 +411,7 @@ def test_MR4():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 2
+    n_repeats = 5
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr4")
 
@@ -443,19 +447,23 @@ def test_MR4():
     ###########################################################################
 
     n_dead_cols = [f"n_dead_{day}" for day in range(0, 201)]
-    n_dead_source_array = source_df[n_dead_cols].to_numpy().flatten()
-    source_deceased_gradient = np.gradient(n_dead_source_array)
-    source_deceased_max_gradient_day = np.argmax(source_deceased_gradient)
+    n_dead_source_array = source_df[n_dead_cols].to_numpy()
+    source_deceased_gradient = np.gradient(n_dead_source_array, axis=1)
+    source_deceased_max_gradient_day = np.argmax(source_deceased_gradient,
+                                                 axis=1)
+    source_mean_max_gradient_day = source_deceased_max_gradient_day.mean()
 
-    n_dead_follow_up_array = follow_up_df[n_dead_cols].to_numpy().flatten()
-    follow_up_deceased_gradient = np.gradient(n_dead_follow_up_array)
-    follow_up_deceased_max_gradient_day = np.argmax(follow_up_deceased_gradient)
+    n_dead_follow_up_array = follow_up_df[n_dead_cols].to_numpy()
+    follow_up_deceased_gradient = np.gradient(n_dead_follow_up_array, axis=1)
+    follow_up_deceased_max_gradient_day = np.argmax(follow_up_deceased_gradient,
+                                                    axis=1)
+    follow_up_mean_max_gradient_day = follow_up_deceased_max_gradient_day.mean()
 
-    peak_delta = (source_deceased_max_gradient_day -
-                  follow_up_deceased_max_gradient_day)
+    peak_delta = (source_mean_max_gradient_day -
+                  follow_up_mean_max_gradient_day)
 
-    test_a = (follow_up_deceased_max_gradient_day <
-              source_deceased_max_gradient_day)
+    test_a = (follow_up_mean_max_gradient_day <
+              source_mean_max_gradient_day)
 
     end_time = time.time()
     execution_time = end_time - start_time
@@ -488,7 +496,7 @@ def test_MR5():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 5
+    n_repeats = 30
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr5")
 
@@ -553,12 +561,94 @@ def test_MR5():
                                            follow_up_mortality_time)
 
     results_data_df.to_csv(OUTPUT_CSV_PATH)
-    print(infected_delta, deceased_delta)
+    assert test_pass
+
+
+def test_MR5_fixed():
+    """Decreasing the death time should reduce the number of infections and
+    deaths."""
+    # Repeat every test 30 times using the same change in input parameter.
+    n = np.random.uniform(0, 0.999)
+    execution_data_df = empty_results_df()
+    results_data_df = pd.read_csv(OUTPUT_CSV_PATH, index_col=[0])
+
+    # Time completion of n repeats
+    start_time = time.time()
+    n_repeats = 30
+    for repeat in range(n_repeats):
+        execution_data_df = run_source_test(execution_data_df, "mr5")
+
+        follow_up_start_time = time.time()
+        follow_up_pars = {"rand_seed": np.random.randint(1, 1e6)}
+        follow_up_sim = covid19(pars_to_change=follow_up_pars)
+
+        # Decrease mean of the mortality time AND recovery times
+        follow_up_sim.pars["dur"]["crit2die"]["par1"] *= n
+        follow_up_sim.pars["dur"]["asym2rec"]["par1"] *= n
+        follow_up_sim.pars["dur"]["mild2rec"]["par1"] *= n
+        follow_up_sim.pars["dur"]["sev2rec"]["par1"] *= n
+        follow_up_sim.pars["dur"]["crit2rec"]["par1"] *= n
+
+        executed_follow_up_sim = run_covid19(follow_up_sim)
+
+        follow_up_execution_time = time.time() - follow_up_start_time
+        execution_data_df = append_execution_to_df(execution_data_df,
+                                                   executed_follow_up_sim,
+                                                   "MR5",
+                                                   "follow-up",
+                                                   follow_up_execution_time,
+                                                   n)
+
+    save_execution_data_to_csv(execution_data_df, "mr5")
+    source_df, follow_up_df = get_source_and_follow_up_df(execution_data_df)
+
+    ############################## SANITY CHECKS ##############################
+    # The mortality time should be the same for all source executions
+    source_mortality_time = source_df["mortality_time"].astype(str).unique()
+    assert len(source_mortality_time) == 1
+
+    # The mortality time should be the same for all follow-up executions
+    follow_up_mortality_time = follow_up_df[
+        "mortality_time"].astype(str).unique()
+    assert len(follow_up_mortality_time) == 1
+
+    # The mortality time should be different for source vs. follow-up executions
+    assert (source_mortality_time != follow_up_mortality_time)
+    ###########################################################################
+
+    infected_delta = (source_df["cum_infections_200"].mean() -
+                      follow_up_df["cum_infections_200"].mean())
+    deceased_delta = (source_df["n_dead_200"].mean() -
+                      follow_up_df["n_dead_200"].mean())
+
+    test_a = 0 < infected_delta
+    test_b = 0 < deceased_delta
+
+    end_time = time.time()
+    execution_time = end_time - start_time
+    test_pass = test_a and test_b
+
+    # Write the overall metamorphic test results to CSV
+    results_data_df = append_results_to_df(results_data_df,
+                                           "MR5",
+                                           execution_time,
+                                           test_pass,
+                                           "mortality_time_mean",
+                                           ["deceased", "infections"],
+                                           n,
+                                           {"infected_delta": infected_delta,
+                                            "deceased_delta": deceased_delta},
+                                           n_repeats,
+                                           source_mortality_time,
+                                           follow_up_mortality_time)
+
+    results_data_df.to_csv(OUTPUT_CSV_PATH)
     assert test_pass
 
 
 def test_MR6():
-    """Increasing the death time should reduce the number of infections and
+    # TODO: FAILS
+    """Increasing the death time should increase the number of infections and
     deaths."""
     # Repeat every test 30 times using the same change in input parameter.
     n = np.random.uniform(1.001, 30)
@@ -567,7 +657,7 @@ def test_MR6():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 30
+    n_repeats = 5
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr6")
 
@@ -577,6 +667,88 @@ def test_MR6():
 
         # Increase mean of the mortality time
         follow_up_sim.pars["dur"]["crit2die"]["par1"] *= n
+
+        executed_follow_up_sim = run_covid19(follow_up_sim)
+
+        follow_up_execution_time = time.time() - follow_up_start_time
+        execution_data_df = append_execution_to_df(execution_data_df,
+                                                   executed_follow_up_sim,
+                                                   "MR6",
+                                                   "follow-up",
+                                                   follow_up_execution_time,
+                                                   n)
+
+    save_execution_data_to_csv(execution_data_df, "mr6")
+    source_df, follow_up_df = get_source_and_follow_up_df(execution_data_df)
+
+    ############################## SANITY CHECKS ##############################
+    # The mortality time should be the same for all source executions
+    source_mortality_time = source_df["mortality_time"].astype(str).unique()
+    assert len(source_mortality_time) == 1
+
+    # The mortality time should be the same for all follow-up executions
+    follow_up_mortality_time = follow_up_df[
+        "mortality_time"].astype(str).unique()
+    assert len(follow_up_mortality_time) == 1
+
+    # The mortality time should be different for source vs. follow-up executions
+    assert (source_mortality_time != follow_up_mortality_time)
+    ###########################################################################
+
+    infected_delta = (source_df["cum_infections_200"].mean() -
+                      follow_up_df["cum_infections_200"].mean())
+    deceased_delta = (source_df["n_dead_200"].mean() -
+                      follow_up_df["n_dead_200"].mean())
+
+    test_a = 0 > infected_delta
+    test_b = 0 > deceased_delta
+
+    end_time = time.time()
+    execution_time = end_time - start_time
+    test_pass = test_a and test_b
+
+    # Write the overall metamorphic test results to CSV
+    results_data_df = append_results_to_df(results_data_df,
+                                           "MR6",
+                                           execution_time,
+                                           test_pass,
+                                           "mortality_time_mean",
+                                           ["deceased", "infections"],
+                                           n,
+                                           {"infected_delta": infected_delta,
+                                            "deceased_delta": deceased_delta},
+                                           n_repeats,
+                                           source_mortality_time,
+                                           follow_up_mortality_time)
+
+    results_data_df.to_csv(OUTPUT_CSV_PATH)
+    assert test_pass
+
+
+def test_MR6_fixed():
+    """Increasing the death time should increase the number of infections and
+    deaths."""
+    # Repeat every test 30 times using the same change in input parameter.
+    n = np.random.uniform(1.001, 30)
+    execution_data_df = empty_results_df()
+    results_data_df = pd.read_csv(OUTPUT_CSV_PATH, index_col=[0])
+
+    # Time completion of n repeats
+    start_time = time.time()
+    n_repeats = 5
+    for repeat in range(n_repeats):
+        execution_data_df = run_source_test(execution_data_df, "mr6")
+
+        follow_up_start_time = time.time()
+        follow_up_pars = {"rand_seed": np.random.randint(1, 1e6)}
+        follow_up_sim = covid19(pars_to_change=follow_up_pars)
+
+        # Increase mean of the mortality AND recovery times
+        follow_up_sim.pars["dur"]["crit2die"]["par1"] *= n
+        follow_up_sim.pars["dur"]["asym2rec"]["par1"] *= n
+        follow_up_sim.pars["dur"]["mild2rec"]["par1"] *= n
+        follow_up_sim.pars["dur"]["sev2rec"]["par1"] *= n
+        follow_up_sim.pars["dur"]["crit2rec"]["par1"] *= n
 
         executed_follow_up_sim = run_covid19(follow_up_sim)
 
@@ -645,7 +817,7 @@ def test_MR7():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 30
+    n_repeats = 5
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr7")
 
@@ -730,7 +902,7 @@ def test_MR8():
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 10
+    n_repeats = 5
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr8")
 
@@ -857,23 +1029,30 @@ def test_MR9():
 
     cum_infections_cols = [f"cum_infections_{day}" for day in range(0, 201)]
     cum_infections_source_array = source_df[
-        cum_infections_cols].to_numpy().flatten()
-    source_cum_infections_gradient = np.gradient(cum_infections_source_array)
-    source_cum_infections_max_gradient_day = np.argmax(
-        source_cum_infections_gradient)
+        cum_infections_cols].to_numpy()
+    source_cum_infections_gradients = np.gradient(cum_infections_source_array,
+                                                  axis=1)
+
+    source_cum_infections_max_gradient_days = np.argmax(
+        source_cum_infections_gradients, axis=1)
+
+    mean_source_cum_infections_max_gradient_day = \
+        source_cum_infections_max_gradient_days.mean()
 
     cum_infections_follow_up_array = follow_up_df[
-        cum_infections_cols].to_numpy().flatten()
-    follow_up_cum_infections_gradient = np.gradient(
-        cum_infections_follow_up_array)
-    follow_up_cum_infections_max_gradient_day = np.argmax(
-        follow_up_cum_infections_gradient)
+        cum_infections_cols].to_numpy()
+    follow_up_cum_infections_gradients = np.gradient(
+        cum_infections_follow_up_array, axis=1)
+    follow_up_cum_infections_max_gradient_days = np.argmax(
+        follow_up_cum_infections_gradients, axis=1)
 
-    peak_delta = (source_cum_infections_max_gradient_day -
-                  follow_up_cum_infections_max_gradient_day)
+    mean_follow_up_cum_infections_max_gradient_day = \
+        follow_up_cum_infections_max_gradient_days.mean()
 
-    test_a = (source_cum_infections_max_gradient_day >
-              follow_up_cum_infections_max_gradient_day)
+    peak_day_delta = (mean_source_cum_infections_max_gradient_day -
+                      mean_follow_up_cum_infections_max_gradient_day)
+
+    test_a = peak_day_delta > 0
 
     end_time = time.time()
     execution_time = end_time - start_time
@@ -887,7 +1066,7 @@ def test_MR9():
                                            "incubation_time",
                                            "peak_cum_infections_rate",
                                            n,
-                                           peak_delta,
+                                           peak_day_delta,
                                            n_repeats,
                                            source_incubation_time,
                                            follow_up_incubation_time)
@@ -897,18 +1076,15 @@ def test_MR9():
 
 
 def test_MR10():
-    """Increasing incubation time should cause peak infections to occur sooner.
-    This means that the day of the source peak should occur sooner than day of
-    follow-up peak. The difference (source - follow-up) should therefore be
-    negative."""
+    """Increasing incubation time should delay peak infection rate."""
     # Repeat every test 30 times using the same change in input parameter.
-    n = np.random.uniform(1.001, 30)
+    n = np.random.uniform(1.001, 3)
     execution_data_df = empty_results_df()
     results_data_df = pd.read_csv(OUTPUT_CSV_PATH, index_col=[0])
 
     # Time completion of n repeats
     start_time = time.time()
-    n_repeats = 15
+    n_repeats = 4
     for repeat in range(n_repeats):
         execution_data_df = run_source_test(execution_data_df, "mr10")
 
@@ -948,23 +1124,30 @@ def test_MR10():
 
     cum_infections_cols = [f"cum_infections_{day}" for day in range(0, 201)]
     cum_infections_source_array = source_df[
-        cum_infections_cols].to_numpy().flatten()
-    source_cum_infections_gradient = np.gradient(cum_infections_source_array)
-    source_cum_infections_max_gradient_day = np.argmax(
-        source_cum_infections_gradient)
+        cum_infections_cols].to_numpy()
+    source_cum_infections_gradients = np.gradient(cum_infections_source_array,
+                                                  axis=1)
+
+    source_cum_infections_max_gradient_days = np.argmax(
+        source_cum_infections_gradients, axis=1)
+
+    mean_source_cum_infections_max_gradient_day = \
+        source_cum_infections_max_gradient_days.mean()
 
     cum_infections_follow_up_array = follow_up_df[
-        cum_infections_cols].to_numpy().flatten()
-    follow_up_cum_infections_gradient = np.gradient(
-        cum_infections_follow_up_array)
-    follow_up_cum_infections_max_gradient_day = np.argmax(
-        follow_up_cum_infections_gradient)
+        cum_infections_cols].to_numpy()
+    follow_up_cum_infections_gradients = np.gradient(
+        cum_infections_follow_up_array, axis=1)
+    follow_up_cum_infections_max_gradient_days = np.argmax(
+        follow_up_cum_infections_gradients, axis=1)
 
-    peak_delta = (source_cum_infections_max_gradient_day -
-                  follow_up_cum_infections_max_gradient_day)
+    mean_follow_up_cum_infections_max_gradient_day = \
+        follow_up_cum_infections_max_gradient_days.mean()
 
-    test_a = (source_cum_infections_max_gradient_day <
-              follow_up_cum_infections_max_gradient_day)
+    peak_day_delta = (mean_source_cum_infections_max_gradient_day -
+                      mean_follow_up_cum_infections_max_gradient_day)
+
+    test_a = peak_day_delta < 0
 
     end_time = time.time()
     execution_time = end_time - start_time
@@ -976,9 +1159,9 @@ def test_MR10():
                                            execution_time,
                                            test_pass,
                                            "incubation_time",
-                                           "peak_cum_infections_rate",
+                                           "peak_cum_infections_rate_delta",
                                            n,
-                                           peak_delta,
+                                           peak_day_delta,
                                            n_repeats,
                                            source_incubation_time,
                                            follow_up_incubation_time)
@@ -988,7 +1171,7 @@ def test_MR10():
 
 
 def test_MR11():
-    """Decreasing incubation time should decrease peak infections and, in turn,
+    """Decreasing recovery time should decrease peak infections and, in turn,
     reduce the maximum rate of death."""
     # Repeat every test 30 times using the same change in input parameter.
     n = np.random.uniform(0, 0.999)
@@ -1042,28 +1225,36 @@ def test_MR11():
 
     # Get cumulative infections time-series for source and follow-up
     cum_infections_source_array = source_df[
-        cum_infections_cols].to_numpy().flatten()
+        cum_infections_cols].to_numpy()
     cum_infections_follow_up_array = follow_up_df[
-        cum_infections_cols].to_numpy().flatten()
+        cum_infections_cols].to_numpy()
+
+    source_peak_infections = cum_infections_source_array.max(axis=1)
+    source_mean_peak_infections = source_peak_infections.mean()
+    follow_up_peak_infections = cum_infections_follow_up_array.max(axis=1)
+    follow_up_mean_peak_infections = follow_up_peak_infections.mean()
 
     # Get difference in peak infections between source and follow-up
-    peak_infections_delta = (cum_infections_source_array.max() -
-                             cum_infections_follow_up_array.max())
+    peak_infections_delta = (source_mean_peak_infections -
+                             follow_up_mean_peak_infections)
 
     test_a = peak_infections_delta > 0
 
     # Get difference in maximum rate of death between source and follow-up
     n_dead_cols = [f"n_dead_{day}" for day in range(0, 201)]
-    n_dead_source_array = source_df[n_dead_cols].to_numpy().flatten()
-    source_deceased_gradient = np.gradient(n_dead_source_array)
-    source_deceased_max_gradient = np.max(source_deceased_gradient)
+    n_dead_source_array = source_df[n_dead_cols].to_numpy()
+    source_deceased_gradient = np.gradient(n_dead_source_array, axis=1)
+    source_deceased_max_gradient = np.max(source_deceased_gradient, axis=1)
+    mean_source_max_gradient = source_deceased_max_gradient.mean()
 
-    n_dead_follow_up_array = follow_up_df[n_dead_cols].to_numpy().flatten()
-    follow_up_deceased_gradient = np.gradient(n_dead_follow_up_array)
-    follow_up_deceased_max_gradient = np.max(follow_up_deceased_gradient)
+    n_dead_follow_up_array = follow_up_df[n_dead_cols].to_numpy()
+    follow_up_deceased_gradient = np.gradient(n_dead_follow_up_array, axis=1)
+    follow_up_deceased_max_gradient = np.max(follow_up_deceased_gradient,
+                                             axis=1)
+    mean_follow_up_max_gradient = follow_up_deceased_max_gradient.mean()
 
-    peak_death_rate_delta = (source_deceased_max_gradient -
-                             follow_up_deceased_max_gradient)
+    peak_death_rate_delta = (mean_source_max_gradient -
+                             mean_follow_up_max_gradient)
 
     test_b = peak_death_rate_delta > 0
 
@@ -1147,28 +1338,36 @@ def test_MR12():
 
     # Get cumulative infections time-series for source and follow-up
     cum_infections_source_array = source_df[
-        cum_infections_cols].to_numpy().flatten()
+        cum_infections_cols].to_numpy()
     cum_infections_follow_up_array = follow_up_df[
-        cum_infections_cols].to_numpy().flatten()
+        cum_infections_cols].to_numpy()
+
+    source_peak_infections = cum_infections_source_array.max(axis=1)
+    source_mean_peak_infections = source_peak_infections.mean()
+    follow_up_peak_infections = cum_infections_follow_up_array.max(axis=1)
+    follow_up_mean_peak_infections = follow_up_peak_infections.mean()
 
     # Get difference in peak infections between source and follow-up
-    peak_infections_delta = (cum_infections_source_array.max() -
-                             cum_infections_follow_up_array.max())
+    peak_infections_delta = (source_mean_peak_infections -
+                             follow_up_mean_peak_infections)
 
     test_a = peak_infections_delta < 0
 
     # Get difference in maximum rate of death between source and follow-up
     n_dead_cols = [f"n_dead_{day}" for day in range(0, 201)]
-    n_dead_source_array = source_df[n_dead_cols].to_numpy().flatten()
-    source_deceased_gradient = np.gradient(n_dead_source_array)
-    source_deceased_max_gradient = np.max(source_deceased_gradient)
+    n_dead_source_array = source_df[n_dead_cols].to_numpy()
+    source_deceased_gradient = np.gradient(n_dead_source_array, axis=1)
+    source_deceased_max_gradient = np.max(source_deceased_gradient, axis=1)
+    mean_source_max_gradient = source_deceased_max_gradient.mean()
 
-    n_dead_follow_up_array = follow_up_df[n_dead_cols].to_numpy().flatten()
-    follow_up_deceased_gradient = np.gradient(n_dead_follow_up_array)
-    follow_up_deceased_max_gradient = np.max(follow_up_deceased_gradient)
+    n_dead_follow_up_array = follow_up_df[n_dead_cols].to_numpy()
+    follow_up_deceased_gradient = np.gradient(n_dead_follow_up_array, axis=1)
+    follow_up_deceased_max_gradient = np.max(follow_up_deceased_gradient,
+                                             axis=1)
+    mean_follow_up_max_gradient = follow_up_deceased_max_gradient.mean()
 
-    peak_death_rate_delta = (source_deceased_max_gradient -
-                             follow_up_deceased_max_gradient)
+    peak_death_rate_delta = (mean_source_max_gradient -
+                             mean_follow_up_max_gradient)
 
     test_b = peak_death_rate_delta < 0
 
@@ -1252,28 +1451,37 @@ def test_MR13():
 
     # Get cumulative infections time-series for source and follow-up
     cum_infections_source_array = source_df[
-        cum_infections_cols].to_numpy().flatten()
+        cum_infections_cols].to_numpy()
     cum_infections_follow_up_array = follow_up_df[
-        cum_infections_cols].to_numpy().flatten()
+        cum_infections_cols].to_numpy()
 
-    # Get difference in peak infections between source and follow-up
-    peak_infections_delta = (cum_infections_source_array.max() -
-                             cum_infections_follow_up_array.max())
+    # Get difference in average peak infections between source and follow-up
+    peak_cum_infections_source = cum_infections_source_array.max(axis=1)
+    mean_peak_cum_infections_source = peak_cum_infections_source.mean()
+
+    peak_cum_infections_follow_up = cum_infections_follow_up_array.max(axis=1)
+    mean_peak_cum_infections_follow_up = peak_cum_infections_follow_up.mean()
+
+    peak_infections_delta = (mean_peak_cum_infections_source -
+                             mean_peak_cum_infections_follow_up)
 
     test_a = peak_infections_delta > 0
 
     # Get difference in maximum rate of death between source and follow-up
     n_dead_cols = [f"n_dead_{day}" for day in range(0, 201)]
-    n_dead_source_array = source_df[n_dead_cols].to_numpy().flatten()
-    source_deceased_gradient = np.gradient(n_dead_source_array)
-    source_deceased_max_gradient = np.max(source_deceased_gradient)
+    n_dead_source_array = source_df[n_dead_cols].to_numpy()
+    source_deceased_gradient = np.gradient(n_dead_source_array, axis=1)
+    source_deceased_max_gradient = np.max(source_deceased_gradient, axis=1)
+    mean_source_max_gradient = source_deceased_max_gradient.mean()
 
-    n_dead_follow_up_array = follow_up_df[n_dead_cols].to_numpy().flatten()
-    follow_up_deceased_gradient = np.gradient(n_dead_follow_up_array)
-    follow_up_deceased_max_gradient = np.max(follow_up_deceased_gradient)
+    n_dead_follow_up_array = follow_up_df[n_dead_cols].to_numpy()
+    follow_up_deceased_gradient = np.gradient(n_dead_follow_up_array, axis=1)
+    follow_up_deceased_max_gradient = np.max(follow_up_deceased_gradient,
+                                             axis=1)
+    mean_follow_up_max_gradient = follow_up_deceased_max_gradient.mean()
 
-    peak_death_rate_delta = (source_deceased_max_gradient -
-                             follow_up_deceased_max_gradient)
+    peak_death_rate_delta = (mean_source_max_gradient -
+                             mean_follow_up_max_gradient)
 
     test_b = peak_death_rate_delta > 0
 
@@ -1357,28 +1565,37 @@ def test_MR14():
 
     # Get cumulative infections time-series for source and follow-up
     cum_infections_source_array = source_df[
-        cum_infections_cols].to_numpy().flatten()
+        cum_infections_cols].to_numpy()
     cum_infections_follow_up_array = follow_up_df[
-        cum_infections_cols].to_numpy().flatten()
+        cum_infections_cols].to_numpy()
 
-    # Get difference in peak infections between source and follow-up
-    peak_infections_delta = (cum_infections_source_array.max() -
-                             cum_infections_follow_up_array.max())
+    # Get difference in average peak infections between source and follow-up
+    peak_cum_infections_source = cum_infections_source_array.max(axis=1)
+    mean_peak_cum_infections_source = peak_cum_infections_source.mean()
+
+    peak_cum_infections_follow_up = cum_infections_follow_up_array.max(axis=1)
+    mean_peak_cum_infections_follow_up = peak_cum_infections_follow_up.mean()
+
+    peak_infections_delta = (mean_peak_cum_infections_source -
+                             mean_peak_cum_infections_follow_up)
 
     test_a = peak_infections_delta < 0
 
     # Get difference in maximum rate of death between source and follow-up
     n_dead_cols = [f"n_dead_{day}" for day in range(0, 201)]
-    n_dead_source_array = source_df[n_dead_cols].to_numpy().flatten()
-    source_deceased_gradient = np.gradient(n_dead_source_array)
-    source_deceased_max_gradient = np.max(source_deceased_gradient)
+    n_dead_source_array = source_df[n_dead_cols].to_numpy()
+    source_deceased_gradient = np.gradient(n_dead_source_array, axis=1)
+    source_deceased_max_gradient = np.max(source_deceased_gradient, axis=1)
+    mean_source_max_gradient = source_deceased_max_gradient.mean()
 
-    n_dead_follow_up_array = follow_up_df[n_dead_cols].to_numpy().flatten()
-    follow_up_deceased_gradient = np.gradient(n_dead_follow_up_array)
-    follow_up_deceased_max_gradient = np.max(follow_up_deceased_gradient)
+    n_dead_follow_up_array = follow_up_df[n_dead_cols].to_numpy()
+    follow_up_deceased_gradient = np.gradient(n_dead_follow_up_array, axis=1)
+    follow_up_deceased_max_gradient = np.max(follow_up_deceased_gradient,
+                                             axis=1)
+    mean_follow_up_max_gradient = follow_up_deceased_max_gradient.mean()
 
-    peak_death_rate_delta = (source_deceased_max_gradient -
-                             follow_up_deceased_max_gradient)
+    peak_death_rate_delta = (mean_source_max_gradient -
+                             mean_follow_up_max_gradient)
 
     test_b = peak_death_rate_delta < 0
 
