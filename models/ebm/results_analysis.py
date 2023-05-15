@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from pprint import pprint
 
 RESULTS_CSV_PATH = "metamorphic_testing_data.csv"
