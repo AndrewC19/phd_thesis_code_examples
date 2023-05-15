@@ -1259,7 +1259,7 @@ def test_MR9():
 def test_MR10():
     """Increasing incubation time should delay peak infection rate."""
     # Repeat every test 30 times using the same change in input parameter.
-    n = np.random.uniform(1.001, 3)
+    n = np.random.uniform(1.001, 30)
     execution_data_df = empty_results_df()
     results_data_df = pd.read_csv(OUTPUT_CSV_PATH, index_col=[0])
 
