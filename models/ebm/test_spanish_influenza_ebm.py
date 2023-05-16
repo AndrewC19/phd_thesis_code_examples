@@ -14,7 +14,7 @@ import time
 
 OUTPUT_CSV_PATH = "metamorphic_testing_data.csv"
 
-random.seed(123)  # set seed for reproducibility
+np.random.seed(123)  # set seed for reproducibility
 
 
 def random_mortality_prob():
